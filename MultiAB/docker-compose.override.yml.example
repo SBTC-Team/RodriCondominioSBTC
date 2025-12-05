@@ -1,0 +1,16 @@
+# docker-compose.override.yml
+# Copia este archivo a docker-compose.override.yml y ajusta los valores según necesites
+# Este archivo se carga automáticamente por docker-compose
+
+version: '3.8'
+
+services:
+  api:
+    environment:
+      # Cambiar el entorno si lo necesitas
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Ajustar la cadena de conexión si es necesario
+      - ConnectionStrings__DefaultConnection=Server=mysql;Database=MultiAB;User=root;Password=1234;Port=3306;CharSet=utf8mb4;
+
+
+

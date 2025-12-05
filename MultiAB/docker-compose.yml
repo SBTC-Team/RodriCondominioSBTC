@@ -1,0 +1,69 @@
+services:
+  # Base de datos MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: multiab-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: MultiAB
+      MYSQL_USER: multiab_user
+      MYSQL_PASSWORD: multiab_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - multiab-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aplicación .NET
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: multiab-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=mysql;Database=MultiAB;User=root;Password=1234;Port=3306;CharSet=utf8mb4;
+    ports:
+      - "5042:8080"
+    networks:
+      - multiab-network
+
+  # Servicio para ejecutar migraciones (usa SDK)
+  migrations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrations
+    container_name: multiab-migrations
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mysql;Database=MultiAB;User=root;Password=1234;Port=3306;CharSet=utf8mb4;
+    networks:
+      - multiab-network
+    profiles:
+      - migrations
+    command: sh -c "export PATH=\"$$PATH:/root/.dotnet/tools\" && cd /app && dotnet ef database update"
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  multiab-network:
+    driver: bridge
+
